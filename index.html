@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <title>AC Service – Cloud Edition</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,Helvetica,Arial,sans-serif}
@@ -85,7 +85,8 @@
         appId: "1:353757529591:web:6156439e692e1b3e469af2",
         measurementId: "G-EMFXR8JQXW"
         };
-    firebase.initializeApp(firebaseConfig);
+// delete every "import …"
+    const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
     const root = db.ref();
@@ -98,7 +99,14 @@
         await root.child('users/tech@acservice.com').set({name:'Technician',role:'employee',password:'tech1234'});
       }
     }
-
+    (async () => {
+    const usersRef = db.ref('users');
+    const snap = await usersRef.once('value');
+    if (!snap.exists()) {
+        await usersRef.child('admin@acservice').set({name:'Admin',role:'admin',password:'admin123'});
+        await usersRef.child('tech@acservice').set({name:'Technician',role:'employee',password:'tech1234'});
+    }
+    })();
     /* ========= 3. LOGIN ========= */
     document.getElementById('loginForm').addEventListener('submit', async e => {
       e.preventDefault();
