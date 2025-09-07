@@ -41,6 +41,9 @@
     <p style="margin-top:15px;font-size:14px;color:#555">
       Demo:<br>Admin → admin@acservice.com / admin123<br>Employee → tech@acservice.com / tech1234
     </p>
+    <p style="text-align:center;margin-top:15px">
+    <button class="btn btn-secondary" onclick="showRegister()">Create new account</button>
+    </p>
     <p style="text-align:center;margin-top:15px"><a href="#" onclick="showRegister()">Create new account</a></p>
   </div>
 
@@ -63,6 +66,8 @@
   <div id="customerSection" class="section">
     <h2>Customer Dashboard <button class="btn btn-danger" style="float:right" onclick="logout()">Logout</button></h2>
     <h3>File a Complaint</h3>
+        <!-- ADD THIS BLOCK RIGHT AFTER /FORM (line ~65) -->
+
     <form id="complaintForm">
       <div class="form-group"><label>Description</label><textarea id="desc" required></textarea></div>
       <button class="btn btn-primary" type="submit">Submit</button>
