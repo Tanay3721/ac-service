@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>AC Service – Cloud</title>
 
-  <!-- Firebase compat (no import error) -->
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
-    /* your original CSS (unchanged) */
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
     body{background:linear-gradient(135deg,#f0f7ff 0%,#e6f0ff 100%);color:#2d3748;line-height:1.6}
     header{background:linear-gradient(90deg,#1a365d 0%,#2c5282 100%);color:#fff;padding:25px 0;text-align:center}
@@ -25,7 +24,6 @@
     .form-group{margin-bottom:20px}label{font-weight:600}input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e0;border-radius:8px}
     .card{padding:18px;margin:10px 0;border-radius:8px;border:1px solid #e2e8f0}
     .status-pending{background:#ed8936;color:#fff}.status-assigned{background:#3182ce;color:#fff}.status-completed{background:#38a169;color:#fff}
-    .login-links{text-align:center;margin-top:15px}
   </style>
 </head>
 
@@ -43,12 +41,12 @@
     <div class="login-links">
       <button class="btn btn-secondary" onclick="showRegister()">Create new account</button>
     </div>
-    <!-- <p style="margin-top:15px;font-size:14px;color:#555">
-      Demo:<br>Admin → admin@acservice.com / admin123<br>Employee → tech@acservice.com / tech1234
-    </p> -->
+    <p style="margin-top:15px;font-size:14px;color:#555">
+      Demo:<br>Admin → admin@acservice.com / admin123<br>Employees → tanay@ac.com / savan@ac.com / darshan@ac.com (all use pass: emp123)
+    </p>
   </div>
 
-  <!-- REGISTER -->
+  <!-- REGISTER (NO employee option) -->
   <div id="registerSection" class="register-section" style="display:none">
     <h2>Register</h2>
     <form id="registerForm">
@@ -56,7 +54,7 @@
       <div class="form-group"><label>Email</label><input type="email" id="regEmail" required></div>
       <div class="form-group"><label>Password</label><input type="password" id="regPass" required></div>
       <div class="form-group"><label>Role</label>
-        <select id="regRole"><option value="customer">Customer</option><option value="employee">Employee</option></select>
+        <select id="regRole" disabled><option value="customer" selected>Customer</option></select>
       </div>
       <button class="btn btn-primary" type="submit">Register</button>
       <button class="btn btn-secondary" type="button" onclick="showLogin()">Back</button>
@@ -68,8 +66,11 @@
     <h2>Customer Dashboard <button class="btn btn-danger" style="float:right" onclick="logout()">Logout</button></h2>
     <h3>File a Complaint</h3>
     <form id="complaintForm">
+      <div class="form-group"><label>Service Time (preferred)</label><input type="datetime-local" id="svcTime" required></div>
+      <div class="form-group"><label>Service Address</label><textarea id="svcAddress" required></textarea></div>
+      <div class="form-group"><label>Phone Number</label><input id="svcPhone" required></div>
       <div class="form-group"><label>Description</label><textarea id="desc" required></textarea></div>
-      <button class="btn btn-primary" type="submit">Submit</button>
+      <button class="btn btn-primary" type="submit">Submit Complaint</button>
     </form>
     <h3 style="margin-top:30px">My Complaints</h3><div id="custList"></div>
   </div>
@@ -91,26 +92,26 @@
   <script>
     /* ========= 1.  FIREBASE CONFIG ========= */
     const firebaseConfig = {
-    apiKey: "AIzaSyB5Ubw6wWRN7Buo964rimEOpw-2fJRWvmg",
-    authDomain: "ac-service-80e2d.firebaseapp.com",
-    databaseURL: "https://ac-service-80e2d-default-rtdb.firebaseio.com",
-    projectId: "ac-service-80e2d",
-    storageBucket: "ac-service-80e2d.firebasestorage.app",
-    messagingSenderId: "353757529591",
-    appId: "1:353757529591:web:6156439e692e1b3e469af2",
-    measurementId: "G-EMFXR8JQXW"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "123",
+      appId: "1:123:web:abc"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const root = db.ref();
 
-    /* ========= 2.  SEED DEMO ACCOUNTS (once) ========= */
+    /* ========= 2.  SEED DEMO ACCOUNTS (admin + 3 employees) ========= */
     (async () => {
       const u = await root.child('users').once('value');
       if (!u.exists()) {
         await root.child('users/admin@acservice').set({name:'Admin',role:'admin',password:'admin123'});
-        await root.child('users/tech@acservice').set({name:'Technician',role:'employee',password:'tech1234'});
+        await root.child('users/tanay@ac').set({name:'Tanay',role:'employee',password:'emp123'});
+        await root.child('users/savan@ac').set({name:'Savan',role:'employee',password:'emp123'});
+        await root.child('users/darshan@ac').set({name:'Darshan',role:'employee',password:'emp123'});
       }
     })();
 
@@ -132,7 +133,7 @@
       } else { alert('Invalid credentials'); }
     });
 
-    /* ========= 5.  REGISTER ========= */
+    /* ========= 5.  REGISTER (customer only) ========= */
     document.getElementById('registerForm').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('regEmail').value.trim();
@@ -140,7 +141,7 @@
       if (exist.exists()) return alert('Email already registered');
       const newUser = {
         name: document.getElementById('regName').value.trim(),
-        role: document.getElementById('regRole').value,
+        role: 'customer',
         password: document.getElementById('regPass').value
       };
       await root.child(`users/${email.replace(/\./g,',')}`).set(newUser);
@@ -156,35 +157,49 @@
       else {document.getElementById('customerSection').style.display='block';custListeners();}
     }
 
-    /* ========= 6.  CUSTOMER ========= */
+    /* ========= 6.  CUSTOMER (24h block) ========= */
     function custListeners(){
       const user=JSON.parse(sessionStorage.getItem('user'));
       const ref=root.child('complaints').orderByChild('customerEmail').equalTo(user.email);
       ref.on('value',snap=>{
         const list=document.getElementById('custList');
         list.innerHTML='';
-        snap.forEach(ch=>{const c=ch.val(); list.innerHTML+=card(`Complaint ${c.id}`,c.desc,c.status);});
+        snap.forEach(ch=>{const c=ch.val(); list.innerHTML+=card(`Complaint ${c.id}`,`${c.desc}<br><small>Time: ${c.svcTime} | Address: ${c.svcAddress} | Phone: ${c.svcPhone}</small>`,c.status);});
         if(!snap.exists())list.innerHTML='<p>No complaints yet.</p>';
       });
+
       document.getElementById('complaintForm').addEventListener('submit',async e=>{
         e.preventDefault();
-        const id='COMP'+Date.now();
+        const user=JSON.parse(sessionStorage.getItem('user'));
+        const now=Date.now();
+        const last=await root.child(`lastComplaint/${user.email.replace(/\./g,',')}`).once('value');
+        if(last.exists() && now - last.val() < 24*60*60*1000) {
+          alert('You can only complain once every 24 hours.');
+          return;
+        }
+        const id='COMP'+now;
         await root.child(`complaints/${id}`).set({
           id, customerEmail:user.email, customerName:user.name,
-          desc:document.getElementById('desc').value, status:'pending',
+          svcTime:document.getElementById('svcTime').value,
+          svcAddress:document.getElementById('svcAddress').value,
+          svcPhone:document.getElementById('svcPhone').value,
+          desc:document.getElementById('desc').value,
+          status:'pending',
           date:new Date().toLocaleDateString()
         });
+        await root.child(`lastComplaint/${user.email.replace(/\./g,',')}`).set(now);
         e.target.reset();
+        alert('Complaint submitted!');
       });
     }
 
-    /* ========= 7.  ADMIN ========= */
+    /* ========= 7.  ADMIN (assign to Tanay/Savan/Darshan only) ========= */
     function adminListeners(){
       root.child('complaints').on('value',snap=>{
         const pend=[]; snap.forEach(ch=>{const c=ch.val(); if(c.status==='pending')pend.push(c);});
-        const html=pend.length? pend.map(c=>card(c.id,c.desc,c.status,`
+        const html=pend.length? pend.map(c=>card(c.id,`${c.desc}<br><small>Time: ${c.svcTime} | Address: ${c.svcAddress} | Phone: ${c.svcPhone}</small>`,c.status,`
           <select id="sel${c.id}"><option value="">Pick employee</option>
-          <option>John Smith</option><option>Mike Johnson</option><option>Sarah Williams</option></select>
+          <option>Tanay</option><option>Savan</option><option>Darshan</option></select>
           <button class="btn btn-primary btn-sm" onclick="assign('${c.id}')">Assign</button>`))
         :'<p>Nothing pending.</p>';
         document.getElementById('pendList').innerHTML=html;
@@ -203,7 +218,7 @@
       await root.child(`tasks/${id}`).set({id,emp,desc:c.desc,status:'assigned',assignedDate:new Date().toLocaleDateString()});
     };
 
-    /* ========= 8.  EMPLOYEE ========= */
+    /* ========= 8.  EMPLOYEE (only his tasks) ========= */
     function empListeners(){
       const user=JSON.parse(sessionStorage.getItem('user'));
       const ref=root.child('tasks').orderByChild('emp').equalTo(user.name);
@@ -211,7 +226,7 @@
         const list=document.getElementById('empList');
         list.innerHTML='';
         snap.forEach(ch=>{
-          const t=ch.val(); if(t.status==='assigned')list.innerHTML+=card(t.id,t.desc,t.status,`<button class="btn btn-success btn-sm" onclick="complete('${t.id}')">Mark complete</button>`);
+          const t=ch.val(); if(t.status==='assigned')list.innerHTML+=card(t.id,`${t.desc}<br><small>Customer: ${t.customerName}</small>`,t.status,`<button class="btn btn-success btn-sm" onclick="complete('${t.id}')">Mark complete</button>`);
         });
         if(!list.innerHTML)list.innerHTML='<p>No open tasks.</p>';
       });
