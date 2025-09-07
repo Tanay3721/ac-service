@@ -41,9 +41,9 @@
     <div class="login-links">
       <button class="btn btn-secondary" onclick="showRegister()">Create new account</button>
     </div>
-    <p style="margin-top:15px;font-size:14px;color:#555">
+    <!-- <p style="margin-top:15px;font-size:14px;color:#555">
       Demo:<br>Admin → admin@acservice.com / admin123<br>Employees → tanay@ac.com / savan@ac.com / darshan@ac.com (all use pass: emp123)
-    </p>
+    </p> -->
   </div>
 
   <!-- REGISTER (NO employee option) -->
@@ -92,14 +92,15 @@
   <script>
     /* ========= 1.  FIREBASE CONFIG ========= */
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "123",
-      appId: "1:123:web:abc"
-    };
+  apiKey: "AIzaSyB5Ubw6wWRN7Buo964rimEOpw-2fJRWvmg",
+  authDomain: "ac-service-80e2d.firebaseapp.com",
+  databaseURL: "https://ac-service-80e2d-default-rtdb.firebaseio.com",
+  projectId: "ac-service-80e2d",
+  storageBucket: "ac-service-80e2d.firebasestorage.app",
+  messagingSenderId: "353757529591",
+  appId: "1:353757529591:web:6156439e692e1b3e469af2",
+  measurementId: "G-EMFXR8JQXW"
+};
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const root = db.ref();
