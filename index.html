@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AC Service – Cloud Edition</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,Helvetica,Arial,sans-serif}
+    body{background:#f0f7ff;color:#2d3748;line-height:1.6}
+    header{background:linear-gradient(90deg,#1a365d 0%,#2c5282 100%);color:#fff;padding:25px 0;text-align:center}
+    .section{display:none;background:#fff;margin:20px auto;max-width:900px;padding:25px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    .btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;transition:all .3s ease}
+    .btn-primary{background:linear-gradient(90deg,#2b6cb0 0%,#3182ce 100%);color:#fff}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 12px rgba(0,0,0,.15)}
+    .btn-secondary{background:linear-gradient(90deg,#38a169 0%,#48bb78 100%);color:#fff}
+    .btn-danger{background:linear-gradient(90deg,#e53e3e 0%,#fc8181 100%);color:#fff}
+    .btn-success{background:linear-gradient(90deg,#38a169 0%,#68d391 100%);color:#fff}
+    .login-section{background:#fff;margin:30px auto;max-width:420px;padding:30px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    .form-group{margin-bottom:20px}label{font-weight:600}input,select,textarea{width:100%;padding:10px;border:1px solid #cbd5e0;border-radius:8px}
+    .card{padding:18px;margin:10px 0;border-radius:8px;border:1px solid #e2e8f0}
+    .status-pending{background:#ed8936;color:#fff}.status-assigned{background:#3182ce;color:#fff}.status-completed{background:#38a169;color:#fff}
+  </style>
+</head>
+
+<body>
+  <header><h1>AC Service Management – Cloud</h1></header>
+
+  <!-- LOGIN -->
+  <div id="loginSection" class="login-section">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
+      <div class="form-group"><label>Password</label><input type="password" id="password" required></div>
+      <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+    <p style="margin-top:15px;font-size:14px;color:#555">
+      Demo accounts:<br>
+      Admin → admin@acservice.com / admin123<br>
+      Employee → tech@acservice.com / tech1234
+    </p>
+  </div>
+
+  <!-- CUSTOMER DASH -->
+  <div id="customerSection" class="section">
+    <h2>Customer Dashboard <button class="btn btn-danger" style="float:right" onclick="logout()">Logout</button></h2>
+    <h3>File a Complaint</h3>
+    <form id="complaintForm">
+      <div class="form-group"><label>Description</label><textarea id="desc" required></textarea></div>
+      <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+    <h3 style="margin-top:30px">My Complaints</h3>
+    <div id="custList"></div>
+  </div>
+
+  <!-- ADMIN DASH -->
+  <div id="adminSection" class="section">
+    <h2>Admin Dashboard <button class="btn btn-danger" style="float:right" onclick="logout()">Logout</button></h2>
+    <h3>Pending Complaints</h3><div id="pendList"></div>
+    <h3 style="margin-top:30px">Assigned Tasks</h3><div id="assList"></div>
+    <h3 style="margin-top:30px">Completed Tasks</h3><div id="compList"></div>
+  </div>
+
+  <!-- EMPLOYEE DASH -->
+  <div id="employeeSection" class="section">
+    <h2>Employee Dashboard <button class="btn btn-danger" style="float:right" onclick="logout()">Logout</button></h2>
+    <h3>My Tasks</h3><div id="empList"></div>
+  </div>
+
+  <script>
+    /* ========= 1. FIREBASE CONFIG ========= */
+    import { initializeApp } from "firebase/app";
+    import { getAnalytics } from "firebase/analytics";
+    // Replace with your own firebaseConfig (from console.firebase.google.com)
+        const firebaseConfig = {
+        apiKey: "AIzaSyB5Ubw6wWRN7Buo964rimEOpw-2fJRWvmg",
+        authDomain: "ac-service-80e2d.firebaseapp.com",
+        databaseURL: "https://ac-service-80e2d-default-rtdb.firebaseio.com",
+        projectId: "ac-service-80e2d",
+        storageBucket: "ac-service-80e2d.firebasestorage.app",
+        messagingSenderId: "353757529591",
+        appId: "1:353757529591:web:6156439e692e1b3e469af2",
+        measurementId: "G-EMFXR8JQXW"
+        };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const root = db.ref();
+
+    /* ========= 2. PRE-SEED DEMO USERS (only first admin login) ========= */
+    async function seedUsers() {
+      const usersSnap = await root.child('users').once('value');
+      if (!usersSnap.exists()) {
+        await root.child('users/admin@acservice.com').set({name:'Admin',role:'admin',password:'admin123'});
+        await root.child('users/tech@acservice.com').set({name:'Technician',role:'employee',password:'tech1234'});
+      }
+    }
+
+    /* ========= 3. LOGIN ========= */
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      // simple email/key login (no firebase auth needed – we check ourselves)
+      const u = await root.child(`users/${email.replace(/\./g,',')}`).once('value');
+      if (u.exists() && u.val().password === pass) {
+        sessionStorage.setItem('user', JSON.stringify({email,...u.val()}));
+        route(u.val().role);
+      } else {
+        alert('Invalid credentials');
+      }
+    });
+
+    function route(role) {
+      document.getElementById('loginSection').style.display = 'none';
+      if (role === 'admin') {
+        document.getElementById('adminSection').style.display = 'block';
+        adminListeners();
+      } else if (role === 'employee') {
+        document.getElementById('employeeSection').style.display = 'block';
+        empListeners();
+      } else {
+        document.getElementById('customerSection').style.display = 'block';
+        custListeners();
+      }
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      location.reload();
+    }
+
+    /* ========= 4. CUSTOMER ========= */
+    function custListeners() {
+      const user = JSON.parse(sessionStorage.getItem('user'));
+      const custRef = root.child('complaints').orderByChild('customerEmail').equalTo(user.email);
+      custRef.on('value', snap => {
+        const list = document.getElementById('custList');
+        list.innerHTML = '';
+        snap.forEach(ch => {
+          const c = ch.val();
+          list.innerHTML += card(`Complaint ${c.id}`, c.desc, c.status);
+        });
+        if (!snap.exists()) list.innerHTML = '<p>No complaints yet.</p>';
+      });
+
+      document.getElementById('complaintForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = 'COMP' + Date.now();
+        root.child(`complaints/${id}`).set({
+          id,
+          customerEmail: user.email,
+          customerName: user.name,
+          desc: document.getElementById('desc').value,
+          status: 'pending',
+          date: new Date().toLocaleDateString()
+        });
+        e.target.reset();
+      });
+    }
+
+    /* ========= 5. ADMIN ========= */
+    function adminListeners() {
+      root.child('complaints').on('value', snap => {
+        const pend = [], rest = [];
+        snap.forEach(ch => {
+          const c = ch.val();
+          (c.status === 'pending' ? pend : rest).push(c);
+        });
+        document.getElementById('pendList').innerHTML = pend.length
+          ? pend.map(c => card(c.id, c.desc, c.status, `
+              <select id="sel${c.id}"><option value="">Pick employee</option>
+               <option>John Smith</option><option>Mike Johnson</option><option>Sarah Williams</option></select>
+              <button class="btn btn-primary btn-sm" onclick="assign('${c.id}')">Assign</button>`))
+          : '<p>Nothing pending.</p>';
+      });
+
+      root.child('tasks').on('value', s => {
+        const ass = [], comp = [];
+        s.forEach(ch => {
+          const t = ch.val();
+          (t.status === 'assigned' ? ass : comp).push(t);
+        });
+        document.getElementById('assList').innerHTML = ass.length
+          ? ass.map(t => card(t.id, `${t.desc}<br><small>to <b>${t.emp}</b></small>`, t.status))
+          : '<p>None assigned.</p>';
+        document.getElementById('compList').innerHTML = comp.length
+          ? comp.map(t => card(t.id, `${t.desc}<br><small>by <b>${t.emp}</b></small>`, t.status))
+          : '<p>None completed.</p>';
+      });
+    }
+
+    window.assign = function(id) {
+      const emp = document.getElementById('sel' + id).value;
+      if (!emp) return alert('Choose employee');
+      root.child(`complaints/${id}`).update({status: 'assigned'});
+      root.child(`tasks/${id}`).set({
+        id,
+        emp,
+        desc: document.querySelector(`#sel${id}`).parentElement.parentElement.querySelector('p').innerText,
+        status: 'assigned',
+        assignedDate: new Date().toLocaleDateString()
+      });
+    };
+
+    /* ========= 6. EMPLOYEE ========= */
+    function empListeners() {
+      const user = JSON.parse(sessionStorage.getItem('user'));
+      const empRef = root.child('tasks').orderByChild('emp').equalTo(user.name);
+      empRef.on('value', snap => {
+        const list = document.getElementById('empList');
+        list.innerHTML = '';
+        snap.forEach(ch => {
+          const t = ch.val();
+          if (t.status === 'assigned') {
+            list.innerHTML += card(t.id, t.desc, t.status,
+              `<button class="btn btn-success btn-sm" onclick="complete('${t.id}')">Mark complete</button>`);
+          }
+        });
+        if (!list.innerHTML) list.innerHTML = '<p>No open tasks.</p>';
+      });
+    }
+
+    window.complete = function(id) {
+      root.child(`tasks/${id}`).update({status: 'completed', completedDate: new Date().toLocaleDateString()});
+      root.child(`complaints/${id}`).update({status: 'completed'});
+    };
+
+    /* ========= 7. SMALL HELPERS ========= */
+    function card(title, body, status, extra = '') {
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <b>${title}</b><span class="status status-${status}">${status.toUpperCase()}</span>
+        </div>
+        <p>${body}</p>${extra ? `<div style="margin-top:10px">${extra}</div>` : ''}
+      </div>`;
+    }
+
+    /* ========= 8. ON LOAD ========= */
+    (async () => {
+      await seedUsers();
+      const u = sessionStorage.getItem('user');
+      if (u) route(JSON.parse(u).role);
+    })();
+  </script>
+</body>
+</html>
